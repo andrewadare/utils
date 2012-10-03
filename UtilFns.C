@@ -1,3 +1,5 @@
+
+#if !defined(__CINT__) || defined(__MAKECINT__)
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TList.h"
@@ -12,31 +14,37 @@
 #include "TH1.h"
 #include "TGraph.h"
 #include "TGraphTime.h"
+#endif
 
-// --- Functions ---
-TCanvas* DrawObject(TObject* obj, 
-		    TString drawopt="", 
-		    TString title="",
-		    TObjArray* cList=0,
-		    double xpx=700, double ypx=500);
-
+// Function prototypes
 void SaveCanvases(TObjArray* canvases, const char* fileName);
-TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir = "");
 void SaveCanvasesFromFile(const char* rootFile, 
 			  const char* targetDir, 
 			  const char* tag, 
 			  const char* fileType);
-int PrintPDF(TObjArray* cList, TString base, TString opt = "pdf");
+TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir="");
+int PrintPDFs(TObjArray* cList, TString dir="./", TString opt="");
+int PrintPDF(TObjArray* cList, TString base, TString opt="pdf");
+TCanvas* DrawObject(TObject* obj, 
+		    TString drawopt="", 
+		    TString title="",
+		    TObjArray* cList = 0,
+		    double xpx=700, double ypx=500);
 void SetHistProps(TH1* h,
 		  Int_t linecolor,
 		  Int_t fillcolor,
 		  Int_t markercolor,
 		  Int_t markerstyle,
-		  Double_t markersize);
-
+		  Double_t markersize); 
+void SetGraphProps(TGraph* g,
+		   Int_t linecolor,
+		   Int_t markercolor,
+		   Int_t markerstyle,
+		   Double_t markersize);
 TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
 		      TString opt="", int sleeptime=50);
 
+// Function definitions
 void SaveCanvases(TObjArray* canvases, const char* fileName)
 {
   TFile* f = new TFile(fileName, "recreate");
@@ -131,7 +139,7 @@ TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir)
   return objList;
 }
 
-int PrintPDFs(TObjArray* cList, TString dir="./", TString opt="")
+int PrintPDFs(TObjArray* cList, TString dir, TString opt)
 {
   Int_t nPrinted = 0;  
   TString ext = ".pdf";
@@ -265,7 +273,7 @@ TCanvas* DrawObject(TObject* obj,
   ci++;
 
   if (!title.IsNull() && obj->InheritsFrom("TNamed")) {
-    dynamic_cast<TNamed*>(obj)->SetTitle(title.Data());
+    (dynamic_cast<TNamed*>(obj))->SetTitle(title.Data());
     c->SetTitle(title.Data());
   }
 
@@ -296,6 +304,59 @@ void SetHistProps(TH1* h,
   h->SetMarkerSize(markersize);
 }
 
+void CopyProps(TObject* obj, TObjArray* arr)
+{
+  int lc=0, fc=0, mc=0, ms=0, mz=0;
+  TH1    *h=0;
+  TGraph *g=0;
+
+  bool isTH1 = obj->InheritsFrom(TH1::Class());
+  bool isTGr = obj->InheritsFrom(TGraph::Class());
+
+  if (isTH1) {
+    h  = dynamic_cast<TH1*>(obj);
+    lc = h->GetLineColor();
+    fc = h->GetFillColor();  
+    mc = h->GetMarkerColor();
+    ms = h->GetMarkerStyle();
+    mz = h->GetMarkerSize();
+  }
+  else if (isTGr) {
+    g  = dynamic_cast<TGraph*>(obj);
+    lc = g->GetLineColor();
+    fc = g->GetFillColor();  
+    mc = g->GetMarkerColor();
+    ms = g->GetMarkerStyle();
+    mz = g->GetMarkerSize();
+  }
+  else {
+    Warning("UtilFns - CopyProps()",
+  	    "Class %s not recognized", obj->ClassName());
+    return;
+  }
+  
+  for (int i=0; i<arr->GetEntries(); i++) {
+    
+    if ((arr->At(i))->InheritsFrom(TH1::Class())) {
+      h = (TH1*)arr->At(i);
+      h->SetLineColor(   lc );
+      h->SetFillColor(   fc );
+      h->SetMarkerColor( mc );
+      h->SetMarkerStyle( ms );
+      h->SetMarkerSize(  mz );
+    }
+    else if ((arr->At(i))->InheritsFrom(TGraph::Class())) {
+      g = (TGraph*)arr->At(i);
+      g->SetLineColor(   lc );
+      g->SetFillColor(   fc );
+      g->SetMarkerColor( mc );
+      g->SetMarkerStyle( ms );
+      g->SetMarkerSize(  mz );
+    }
+  }
+
+}
+
 void SetGraphProps(TGraph* g,
 		   Int_t linecolor,
 		   Int_t markercolor,
@@ -317,9 +378,8 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
   gROOT->Info("Animation()", "Creating %d frame sequence...", nFrames);
   TGraphTime* anim = new TGraphTime(nFrames,0,0,1,1);
   anim->SetName(Form("anim%d", iAnim));
-  
+
   for (int n=0; n<nFrames; n++) {
-    
     // Add stationary objects to this frame
     if (statObjs) {
       for (int i=0; i<statObjs->GetEntries(); i++) {
@@ -340,7 +400,11 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
 
   }
 
-  anim->SetTitle("animation");
   anim->SetSleepTime(sleeptime); // ms (default = 0)
+
+  // Rename auto-generated frame histo
+  TH1* hf = (TH1*)gDirectory->Get("frame");
+  hf->SetName(Form("frame%d", iAnim));
+  
   return anim;
 }
