@@ -12,6 +12,7 @@
 #include "TKey.h"
 #include "TSystem.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TGraph.h"
 #include "TGraphTime.h"
 #endif
@@ -31,18 +32,27 @@ TCanvas* DrawObject(TObject* obj,
 		    TObjArray* cList = 0,
 		    double xpx=700, double ypx=500);
 void SetHistProps(TH1* h,
-		  Int_t linecolor,
-		  Int_t fillcolor,
-		  Int_t markercolor,
-		  Int_t markerstyle,
-		  Double_t markersize); 
+		  Int_t linecolor = kBlack,
+		  Int_t fillcolor = kNone,
+		  Int_t markercolor = kBlack,
+		  Int_t markerstyle = kDot,
+		  Double_t markersize = 1.0); 
 void SetGraphProps(TGraph* g,
 		   Int_t linecolor,
 		   Int_t markercolor,
 		   Int_t markerstyle,
 		   Double_t markersize);
-TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
-		      TString opt="", int sleeptime=50);
+TGraphTime* Animation(TH2* h, 
+		      TObjArray* statObjs,
+		      TString opt="", 
+		      int sleeptime=50,
+		      int color=kBlack, 
+		      int mkr=kFullCircle, 
+		      int mkrsize=1.0);
+TGraphTime* Animation(TObjArray* moveObjs, 
+		      TObjArray* statObjs,
+		      TString opt="",
+		      int sleeptime=50);
 
 // Function definitions
 void SaveCanvases(TObjArray* canvases, const char* fileName)
@@ -170,12 +180,19 @@ int PrintPDFs(TObjArray* cList, TString dir, TString opt)
     }
 
     TString fileName = TString(c->GetName()) + ext;
-    if (gSystem->FindFile(dir.Data(), fileName))
-      gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
-    else    
-      fileName = dir + fileName;
 
-    c->Print(fileName.Data(), ext);
+    if (gSystem->FindFile(dir.Data(), fileName.Data()))
+      gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
+    
+    if (!dir.EndsWith("/"))
+      dir.Append("/");
+    
+    fileName.Prepend(dir);
+    
+    if (0)
+      Info("UtilFns - PrintPDFs()", "dir = %s, fileName = %s", dir.Data(), fileName.Data());
+    
+    c->Print(fileName.Data());
     nPrinted++;
   }
   return nPrinted;
@@ -368,6 +385,23 @@ void SetGraphProps(TGraph* g,
   g->SetMarkerStyle(markerstyle);
   g->SetMarkerSize(markersize);
   g->SetLineWidth(2);
+}
+
+TGraphTime* Animation(TH2* h, 
+		      TObjArray* statObjs,
+		      TString opt, 
+		      int sleeptime, 
+		      int color, 
+		      int mkr, 
+		      int mkrsize)
+{
+  static int id=0; id++;
+  TObjArray* a = new TObjArray();
+  for (int k=1; k<=h->GetNbinsY(); k++) {
+    a->Add(h->ProjectionX(Form("h%d_%d",id,k),k,k));
+    SetHistProps((TH1D*)a->At(k-1),color,0,color,kOpenCircle,1.0);
+  }
+  return Animation(a, statObjs, opt, sleeptime);
 }
 
 TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
