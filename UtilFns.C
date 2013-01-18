@@ -13,6 +13,7 @@
 #include "TSystem.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TH3.h"
 #include "TGraph.h"
 #include "TGraphTime.h"
 #endif
@@ -39,20 +40,28 @@ void SetHistProps(TH1* h,
 		  Double_t markersize = 1.0); 
 void SetGraphProps(TGraph* g,
 		   Int_t linecolor,
+		   Int_t fillcolor,
 		   Int_t markercolor,
-		   Int_t markerstyle,
-		   Double_t markersize);
-TGraphTime* Animation(TH2* h, 
-		      TObjArray* statObjs,
-		      TString opt="", 
-		      int sleeptime=50,
-		      int color=kBlack, 
-		      int mkr=kFullCircle, 
-		      int mkrsize=1.0);
+		   Int_t markerstyle=kFullCircle,
+		   Double_t markersize=1.0);
 TGraphTime* Animation(TObjArray* moveObjs, 
 		      TObjArray* statObjs,
 		      TString opt="",
 		      int sleeptime=50);
+TGraphTime* Animation(TH2* h, 
+		      TObjArray* statObjs=0,
+		      TString opt="", 
+		      int sleeptime=50,
+		      int color=kBlack, 
+		      int mkr=kFullCircle, 
+		      double mkrsize=1.0,
+		      double x1=0,double y1=0,double x2=0,double y2=0);
+TGraphTime* Animation(TH3* h, 
+		      TString propt="yx", // project z onto x-y plane 
+		      int sleeptime=50,
+		      TString opt="colz");
+
+TMultiGraph* MultiGraph(TH2* h, TString opt="");
 
 // Function definitions
 void SaveCanvases(TObjArray* canvases, const char* fileName)
@@ -245,7 +254,7 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
     if (i < cList->GetEntries()) {
       psOut = base + ext;
       if(ext.Contains("pdf")) {
-	TString pageName = Form("Title:%s", c->GetTitle());
+	TString pageName = Form("Title:%s", c->GetName());
 	c->Print(psOut.Data(), pageName.Data());
       }
       else
@@ -289,8 +298,10 @@ TCanvas* DrawObject(TObject* obj,
   TCanvas* c = new TCanvas(Form("c%d",ci),Form("c%d",ci), x, y);
   ci++;
 
-  if (!title.IsNull() && obj->InheritsFrom("TNamed")) {
-    (dynamic_cast<TNamed*>(obj))->SetTitle(title.Data());
+  //  if (!title.IsNull() && obj->InheritsFrom("TNamed")) {
+    //    (dynamic_cast<TNamed*>(obj))->SetTitle(title.Data());
+  if (!title.IsNull()) {
+    c->SetName(title.Data());
     c->SetTitle(title.Data());
   }
 
@@ -376,32 +387,17 @@ void CopyProps(TObject* obj, TObjArray* arr)
 
 void SetGraphProps(TGraph* g,
 		   Int_t linecolor,
+		   Int_t fillcolor,
 		   Int_t markercolor,
 		   Int_t markerstyle,
 		   Double_t markersize) 
 {
   g->SetLineColor(linecolor);
+  g->SetFillColor(markercolor);
   g->SetMarkerColor(markercolor);
   g->SetMarkerStyle(markerstyle);
   g->SetMarkerSize(markersize);
   g->SetLineWidth(2);
-}
-
-TGraphTime* Animation(TH2* h, 
-		      TObjArray* statObjs,
-		      TString opt, 
-		      int sleeptime, 
-		      int color, 
-		      int mkr, 
-		      int mkrsize)
-{
-  static int id=0; id++;
-  TObjArray* a = new TObjArray();
-  for (int k=1; k<=h->GetNbinsY(); k++) {
-    a->Add(h->ProjectionX(Form("h%d_%d",id,k),k,k));
-    SetHistProps((TH1D*)a->At(k-1),color,0,color,kOpenCircle,1.0);
-  }
-  return Animation(a, statObjs, opt, sleeptime);
 }
 
 TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
@@ -414,24 +410,20 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
   anim->SetName(Form("anim%d", iAnim));
 
   for (int n=0; n<nFrames; n++) {
-    // Add stationary objects to this frame
+
+    TObject* mov = moveObjs->At(n);
+    
+    // Add changing objects
+    anim->Add(mov, n, opt);
+    
+    // Add stationary objects
     if (statObjs) {
       for (int i=0; i<statObjs->GetEntries(); i++) {
 	TObject* sta = statObjs->At(i);
-	TString drawOpt = i ? "same" : "";
-	if (!opt.IsNull())
-	  drawOpt += opt;
-	anim->Add(sta, n, drawOpt);
+	anim->Add(sta, n, opt+"same");
       }
     }
-
-    // Add changing objects
-    TObject* mov = moveObjs->At(n);
-    TString drawOpt2 = statObjs ? "same" : "";
-    if (!opt.IsNull())
-      drawOpt2 += opt;
-    anim->Add(mov, n, drawOpt2);
-
+    
   }
 
   anim->SetSleepTime(sleeptime); // ms (default = 0)
@@ -441,4 +433,75 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
   hf->SetName(Form("frame%d", iAnim));
   
   return anim;
+}
+
+TGraphTime* Animation(TH2* h, 
+		      TObjArray* statObjs,
+		      TString opt, 
+		      int sleeptime, 
+		      int color, 
+		      int mkr, 
+		      double mkrsize,
+		      double x1,double y1,double x2,double y2)
+{
+  static int id=0; id++;
+  TObjArray* a = new TObjArray();
+
+  for (int k=1; k<=h->GetNbinsY(); k++) {
+    TH1D* hp = h->ProjectionX(Form("h%d_%d",id,k),k,k);
+    
+    if (x2>x1) hp->GetXaxis()->SetRangeUser(x1,x2);
+    if (y2>y1) hp->GetYaxis()->SetRangeUser(y1,y2);
+
+    //    hp->SetTitle(Form("%s, #lambda = %.2g",hp->GetTitle(), h->GetYaxis()->GetBinCenter(k)));
+    //    hp->SetTitle(Form("%s, #lambda bin %d",hp->GetTitle(), k));
+
+    SetHistProps(hp,color,0,color,mkr,mkrsize);
+    hp->SetLineWidth(2);
+    a->Add(hp);
+  }
+  return Animation(a, statObjs, opt, sleeptime);
+}
+
+// TODO: parse propt to determine automatically which proj to do according to Project3D options
+TGraphTime* Animation(TH3* h,
+		      TString propt, 
+		      int sleeptime, 
+		      TString opt)
+{
+  static int id=0; id++;
+  TObjArray* a = new TObjArray();
+  
+  TAxis* axis = h->GetZaxis();
+  
+  for (int k=1; k<=axis->GetNbins(); k++) {
+    axis->SetRange(k,k);
+    TH2D* h2 = h->Project3D(Form("h2_%d_%d_%s",id,k,propt.Data()));
+    h2->SetTitle(Form("k = %d",k));
+    a->Add(h2);
+  }
+  return Animation(a, 0, opt, sleeptime);
+}
+
+TMultiGraph* MultiGraph(TH2* h, TString opt)
+{
+  int nx = h->GetNbinsX();
+  int ny = h->GetNbinsY();
+  TMultiGraph* mg = new TMultiGraph();
+  TGraph* g = 0;
+ 
+  for (int i=0; i<ny; i++) {
+    g = new TGraph(nx);
+    g->SetLineWidth(2);
+    g->SetLineColor(kBlue);
+    g->SetTitle(Form("g%d",i));
+    for (int j=0; j<nx; j++) {
+      double x = h->GetXaxis()->GetBinCenter(j+1);
+      double y = h->GetBinContent(j+1,i+1); 
+      g->SetPoint(j,x,y);
+    }
+    mg->Add(g);
+  }
+
+  return mg;
 }
