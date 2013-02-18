@@ -199,7 +199,8 @@ int PrintPDFs(TObjArray* cList, TString dir, TString opt)
     fileName.Prepend(dir);
     
     if (0)
-      Info("UtilFns - PrintPDFs()", "dir = %s, fileName = %s", dir.Data(), fileName.Data());
+      Info("UtilFns - PrintPDFs()", 
+	   "dir = %s, fileName = %s", dir.Data(), fileName.Data());
     
     c->Print(fileName.Data());
     nPrinted++;
@@ -230,9 +231,10 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
   for (int i=0; i<cList->GetEntries(); i++) {
     TObject* obj = cList->At(i);
     if (TString(obj->ClassName()).Contains("TCanvas"))
-      c = (TCanvas*)obj; //(TCanvas*)cList->At(i); 
+      c = (TCanvas*)obj;
     else {
-      gROOT->Warning("PlotUtils::print_pdf()", "list contains non-canvas object");
+      gROOT->Warning("PlotUtils::print_pdf()", 
+		     "list contains non-canvas object");
       continue;
     }
     if (!c) {
@@ -241,9 +243,9 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
     }
 
     // Slide numbering
-    if (opt.Contains("number")) {
+    if (opt.Contains("number") || opt.Contains("#")) {
       c->cd();
-      ltx.DrawLatex(0.95, 0.95, Form("%d", nPrinted+1));
+      ltx.DrawLatex(0.95, 0.01, Form("%d", nPrinted+1));
     }
     
     // Multipage ps and pdf files
@@ -261,8 +263,13 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
 	c->Print(psOut.Data());
     }
     if (i==cList->GetEntries()-1) {
-      psOut = base + ext + "]";
-      c->Print(psOut.Data()); // closes ps but doesn't print it
+      psOut = base + ext + "]"; // closes ps but doesn't print it
+      if(ext.Contains("pdf")) {
+	TString pageName = Form("Title:%s", c->GetName());
+	c->Print(psOut.Data(), pageName.Data());
+      }
+      else
+	c->Print(psOut.Data());
     }
 
     // Also print pages as individual files, if requested
