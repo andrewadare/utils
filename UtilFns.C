@@ -305,8 +305,6 @@ TCanvas* DrawObject(TObject* obj,
   TCanvas* c = new TCanvas(Form("c%d",ci),Form("c%d",ci), x, y);
   ci++;
 
-  //  if (!title.IsNull() && obj->InheritsFrom("TNamed")) {
-    //    (dynamic_cast<TNamed*>(obj))->SetTitle(title.Data());
   if (!title.IsNull()) {
     c->SetName(title.Data());
     c->SetTitle(title.Data());
@@ -512,3 +510,4 @@ TMultiGraph* MultiGraph(TH2* h, TString opt)
 
   return mg;
 }
+
