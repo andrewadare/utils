@@ -1,3 +1,14 @@
+// UtilFns.C
+//
+// ROOT functions for plotting, image output, animation, etc.
+// Get the latest version:
+// git clone https://github.com/andrewadare/utils.git
+//
+// To use in your interpreted macro, add this line:
+// gROOT->LoadMacro("/path/to/UtilFns.C");
+//
+// Usage in compiled code may require some hacking.
+// -Andrew Adare 4/24/2013
 
 #if !defined(__CINT__) || defined(__MAKECINT__)
 #include "TCanvas.h"
@@ -511,3 +522,42 @@ TMultiGraph* MultiGraph(TH2* h, TString opt)
   return mg;
 }
 
+void MakeBeamerSlides(TString dir, TString texFileName)
+{
+  // Create Beamer slides from a collection of images found in dir.
+
+  TString extensions[3] = {"pdf", "png", "jpg"};
+  TSystemDirectory tsd(dir.Data(), dir.Data());
+  TList* files = tsd.GetListOfFiles();
+
+  gSystem->RedirectOutput(texFileName, "w", 0);
+
+  if (files) {
+    TSystemFile* file = 0;
+    TString fileName;
+    TIter next(files);
+    while((file = (TSystemFile*)next())) {
+      fileName = file->GetName();
+      bool isImage = false;
+      for (int i=0; i<3; i++) {
+	if (fileName.EndsWith(extensions[i].Data()))
+	  isImage = true;
+      }
+      if (!file->IsDirectory() && isImage) {
+	PrintSlide(fileName);
+      }
+    }
+  }
+  
+  gSystem->RedirectOutput(0); // Back to stdout, stderr
+  return;
+}
+
+void PrintSlide(TString fig)
+{
+  Printf("\\begin{frame}{title}{subtitle}");
+  Printf("\\begin{center}");
+  Printf("\\includegraphics[width=0.8\\textwidth]{%s}",fig.Data());
+  Printf("\\end{center}");
+  Printf("\\end{frame}\n\n");
+}
