@@ -27,6 +27,7 @@
 #include "TH3.h"
 #include "TGraph.h"
 #include "TGraphTime.h"
+#include <vector>
 #endif
 
 // Function prototypes
@@ -522,16 +523,16 @@ TMultiGraph* MultiGraph(TH2* h, TString opt)
   return mg;
 }
 
-void MakeBeamerSlides(TString dir, TString texFileName)
+void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
 {
   // Create Beamer slides from a collection of images found in dir.
 
   TString extensions[3] = {"pdf", "png", "jpg"};
   TSystemDirectory tsd(dir.Data(), dir.Data());
   TList* files = tsd.GetListOfFiles();
+  std::vector<TString> fileNames;  
 
-  gSystem->RedirectOutput(texFileName, "w", 0);
-
+  // Select file names to include
   if (files) {
     TSystemFile* file = 0;
     TString fileName;
@@ -544,11 +545,31 @@ void MakeBeamerSlides(TString dir, TString texFileName)
 	  isImage = true;
       }
       if (!file->IsDirectory() && isImage) {
-	PrintSlide(fileName);
+
+	TString origName = dir + TString("/") + fileName;
+
+	// Xetex unfortunately does not support ROOT's /Rotate 90 hack, so
+	// PDFs are included in portrait layout. To deal with this,
+	// create rotated PDFs using pdfcrop. Add "rotate" to opt.
+	if (opt.Contains("rotate") 
+			 && fileName.EndsWith(".pdf") 
+			 && !fileName.EndsWith("-rot.pdf"))) {
+	  
+	  TString newName = origName;
+	  newName.ReplaceAll(".pdf", "-rot.pdf");
+	  gSystem->Exec(Form("pdfcrop %s %s", origName.Data(), newName.Data()));
+	  fileNames.push_back(newName);
+	}
+	else
+	  fileNames.push_back(origName);
       }
     }
   }
   
+  // Write LaTex file
+  gSystem->RedirectOutput(texFileName, "w", 0);
+  for (int i=0; i<(int)fileNames.size(); ++i) 
+    PrintSlide(fileNames.at(i));
   gSystem->RedirectOutput(0); // Back to stdout, stderr
   return;
 }
