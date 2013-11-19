@@ -7,7 +7,7 @@
 // To use in your interpreted macro, add this line:
 // gROOT->LoadMacro("/path/to/UtilFns.C");
 //
-// Usage in compiled code may require some hacking.
+// To use in compiled code, #include it.
 // -Andrew Adare 4/24/2013
 
 #if !defined(__CINT__) || defined(__MAKECINT__)
@@ -27,6 +27,9 @@
 #include "TH3.h"
 #include "TGraph.h"
 #include "TGraphTime.h"
+#include "TMultiGraph.h"
+#include "TSystemDirectory.h"
+#include "TSystemFile.h"
 #include <vector>
 #endif
 
@@ -74,6 +77,9 @@ TGraphTime* Animation(TH3* h,
 		      TString opt="colz");
 
 TMultiGraph* MultiGraph(TH2* h, TString opt="");
+
+void MakeBeamerSlides(TString dir, TString texFileName, TString opt = "");
+void PrintSlide(TString fig);
 
 // Function definitions
 void SaveCanvases(TObjArray* canvases, const char* fileName)
@@ -202,12 +208,12 @@ int PrintPDFs(TObjArray* cList, TString dir, TString opt)
 
     TString fileName = TString(c->GetName()) + ext;
 
-    if (gSystem->FindFile(dir.Data(), fileName.Data()))
-      gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
+    // if (gSystem->FindFile(dir.Data(), fileName))
+    //   gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
     
     if (!dir.EndsWith("/"))
       dir.Append("/");
-    
+
     fileName.Prepend(dir);
     
     if (0)
@@ -410,7 +416,7 @@ void SetGraphProps(TGraph* g,
 		   Double_t markersize) 
 {
   g->SetLineColor(linecolor);
-  g->SetFillColor(markercolor);
+  g->SetFillColor(fillcolor);
   g->SetMarkerColor(markercolor);
   g->SetMarkerStyle(markerstyle);
   g->SetMarkerSize(markersize);
@@ -493,14 +499,14 @@ TGraphTime* Animation(TH3* h,
   
   for (int k=1; k<=axis->GetNbins(); k++) {
     axis->SetRange(k,k);
-    TH2D* h2 = h->Project3D(Form("h2_%d_%d_%s",id,k,propt.Data()));
+    TH2D* h2 = (TH2D*)h->Project3D(Form("h2_%d_%d_%s",id,k,propt.Data()));
     h2->SetTitle(Form("k = %d",k));
     a->Add(h2);
   }
   return Animation(a, 0, opt, sleeptime);
 }
 
-TMultiGraph* MultiGraph(TH2* h, TString opt)
+TMultiGraph* MultiGraph(TH2* h, TString /*opt*/)
 {
   int nx = h->GetNbinsX();
   int ny = h->GetNbinsY();
@@ -526,11 +532,14 @@ TMultiGraph* MultiGraph(TH2* h, TString opt)
 void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
 {
   // Create Beamer slides from a collection of images found in dir.
+  // "rotate" option puts rotated figures into figs directory where
+  // tex file is saved.
 
   TString extensions[3] = {"pdf", "png", "jpg"};
   TSystemDirectory tsd(dir.Data(), dir.Data());
   TList* files = tsd.GetListOfFiles();
   std::vector<TString> fileNames;  
+  const char* outdir = gSystem->DirName(texFileName.Data());
 
   // Select file names to include
   if (files) {
@@ -551,13 +560,11 @@ void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
 	// Xetex unfortunately does not support ROOT's /Rotate 90 hack, so
 	// PDFs are included in portrait layout. To deal with this,
 	// create rotated PDFs using pdfcrop. Add "rotate" to opt.
-	if (opt.Contains("rotate") 
-			 && fileName.EndsWith(".pdf") 
-			 && !fileName.EndsWith("-rot.pdf"))) {
-	  
-	  TString newName = origName;
+	bool rotate = opt.Contains("rotate") && fileName.EndsWith(".pdf") && !fileName.EndsWith("-rot.pdf"); 
+	if (rotate) {
+	  TString newName = fileName;
 	  newName.ReplaceAll(".pdf", "-rot.pdf");
-	  gSystem->Exec(Form("pdfcrop %s %s", origName.Data(), newName.Data()));
+	  gSystem->Exec(Form("pdfcrop %s %s/figs/%s", origName.Data(), outdir, newName.Data()));
 	  fileNames.push_back(newName);
 	}
 	else
@@ -576,7 +583,7 @@ void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
 
 void PrintSlide(TString fig)
 {
-  Printf("\\begin{frame}{title}{subtitle}");
+  Printf("\\begin{frame}{}{}");
   Printf("\\begin{center}");
   Printf("\\includegraphics[width=0.8\\textwidth]{%s}",fig.Data());
   Printf("\\end{center}");
