@@ -35,15 +35,15 @@
 
 // Function prototypes
 void SaveCanvases(TObjArray* canvases, const char* fileName);
-void SaveCanvasesFromFile(const char* rootFile, 
-			  const char* targetDir, 
-			  const char* tag, 
+void SaveCanvasesFromFile(const char* rootFile,
+			  const char* targetDir,
+			  const char* tag,
 			  const char* fileType);
 TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir="");
 int PrintPDFs(TObjArray* cList, TString dir="./", TString opt="");
 int PrintPDF(TObjArray* cList, TString base, TString opt="pdf");
-TCanvas* DrawObject(TObject* obj, 
-		    TString drawopt="", 
+TCanvas* DrawObject(TObject* obj,
+		    TString drawopt="",
 		    TString title="",
 		    TObjArray* cList = 0,
 		    double xpx=700, double ypx=500);
@@ -52,27 +52,27 @@ void SetHistProps(TH1* h,
 		  Int_t fillcolor = kNone,
 		  Int_t markercolor = kBlack,
 		  Int_t markerstyle = kDot,
-		  Double_t markersize = 1.0); 
+		  Double_t markersize = 1.0);
 void SetGraphProps(TGraph* g,
 		   Int_t linecolor,
 		   Int_t fillcolor,
 		   Int_t markercolor,
 		   Int_t markerstyle=kFullCircle,
 		   Double_t markersize=1.0);
-TGraphTime* Animation(TObjArray* moveObjs, 
+TGraphTime* Animation(TObjArray* moveObjs,
 		      TObjArray* statObjs,
 		      TString opt="",
 		      int sleeptime=50);
-TGraphTime* Animation(TH2* h, 
+TGraphTime* Animation(TH2* h,
 		      TObjArray* statObjs=0,
-		      TString opt="", 
+		      TString opt="",
 		      int sleeptime=50,
-		      int color=kBlack, 
-		      int mkr=kFullCircle, 
+		      int color=kBlack,
+		      int mkr=kFullCircle,
 		      double mkrsize=1.0,
 		      double x1=0,double y1=0,double x2=0,double y2=0);
-TGraphTime* Animation(TH3* h, 
-		      TString propt="yx", // project z onto x-y plane 
+TGraphTime* Animation(TH3* h,
+		      TString propt="yx", // project z onto x-y plane
 		      int sleeptime=50,
 		      TString opt="colz");
 
@@ -104,9 +104,9 @@ void SaveCanvases(TObjArray* canvases, const char* fileName)
   return;
 }
 
-void SaveCanvasesFromFile(const char* rootFile, 
-			  const char* targetDir, 
-			  const char* tag, 
+void SaveCanvasesFromFile(const char* rootFile,
+			  const char* targetDir,
+			  const char* tag,
 			  const char* fileType)
 {
   // Get a list of canvases from rootFile into array, then save each
@@ -122,7 +122,7 @@ void SaveCanvasesFromFile(const char* rootFile,
   if (!cList) {
     gROOT->Error("UtilFns::SaveCanvasesFromFile()", "!cList");
   }
-  
+
   for (int n=0; n<cList->GetEntries(); n++) {
     TCanvas* c = (TCanvas*)cList->At(n);
     if (c) {
@@ -134,7 +134,7 @@ void SaveCanvasesFromFile(const char* rootFile,
       name += TString(c->GetTitle());
       name += TString(".");
       name += TString(fileType);
-      
+
       if (0)
 	gROOT->Info("", "%s", name.Data());
 
@@ -150,7 +150,7 @@ void SaveCanvasesFromFile(const char* rootFile,
   if (1) {
     PrintPDF(cList, Form("%s/all-figs%s", targetDir, tag), "pdf");
   }
-  
+
   return;
 }
 
@@ -161,13 +161,13 @@ TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir)
   TObjArray* objList = new TObjArray();
   TIter next(gDirectory->GetListOfKeys());
   TKey *key;
-  
+
   while ((key=(TKey*)next())) {
     TString className(key->GetClassName());
     TString keyName(key->GetName());
-    if (0) 
+    if (0)
       printf("%10s %20s\n", className.Data(), keyName.Data());
-    
+
     if (className.Contains(clname)) {
       objList->Add(gDirectory->Get(keyName.Data()));
     }
@@ -178,14 +178,14 @@ TObjArray* GetObjectsFromFile(TFile& file, TString clname, TString dir)
 
 int PrintPDFs(TObjArray* cList, TString dir, TString opt)
 {
-  Int_t nPrinted = 0;  
+  Int_t nPrinted = 0;
   TString ext = ".pdf";
 
   if (opt.Contains("ps"))
     ext = ".ps";
   if (opt.Contains("eps"))
     ext = ".eps";
-  
+
   if (!cList) {
     gROOT->Error("PrintPDF()", "no cList!");
     return -1;
@@ -197,7 +197,7 @@ int PrintPDFs(TObjArray* cList, TString dir, TString opt)
     if (TString(obj->ClassName()).Contains("TCanvas"))
       c = (TCanvas*)obj;
     else {
-      gROOT->Warning("PrintPDFs()", 
+      gROOT->Warning("PrintPDFs()",
 		     "list contains non-canvas object");
       continue;
     }
@@ -210,17 +210,26 @@ int PrintPDFs(TObjArray* cList, TString dir, TString opt)
 
     // if (gSystem->FindFile(dir.Data(), fileName))
     //   gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
-    
+
     if (!dir.EndsWith("/"))
       dir.Append("/");
 
     fileName.Prepend(dir);
-    
+
     if (0)
-      Info("UtilFns - PrintPDFs()", 
-	   "dir = %s, fileName = %s", dir.Data(), fileName.Data());
-    
+      gROOT->Info("UtilFns - PrintPDFs()",
+		  "dir = %s, fileName = %s", dir.Data(), fileName.Data());
+
     c->Print(fileName.Data());
+
+    // Xetex does not support ROOT's /Rotate 90 hack for setting PDFs
+    // to portrait layout. The pdfcrop utility fixes this problem.
+    if (opt.Contains("pdfcrop")) {
+      const char* name = fileName.Data();
+      gSystem->Exec(Form("pdfcrop %s %s.crop", name, name));
+      gSystem->Exec(Form("mv %s.crop %s", name, name));
+    }
+
     nPrinted++;
   }
   return nPrinted;
@@ -230,9 +239,9 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
 {
   TLatex ltx;
   ltx.SetNDC();
-  Int_t nPrinted = 0;  
+  Int_t nPrinted = 0;
   TString psOut("");
-  
+
   TString ext = ".pdf";
 
   if (opt.Contains("ps"))
@@ -251,7 +260,7 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
     if (TString(obj->ClassName()).Contains("TCanvas"))
       c = (TCanvas*)obj;
     else {
-      gROOT->Warning("PlotUtils::print_pdf()", 
+      gROOT->Warning("PlotUtils::print_pdf()",
 		     "list contains non-canvas object");
       continue;
     }
@@ -265,7 +274,7 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
       c->cd();
       ltx.DrawLatex(0.95, 0.01, Form("%d", nPrinted+1));
     }
-    
+
     // Multipage ps and pdf files
     if (nPrinted==0) {
       psOut = base + ext + "[";
@@ -299,17 +308,17 @@ int PrintPDF(TObjArray* cList, TString base, TString opt)
 
     nPrinted++;
   }
-    
+
   if (ext.Contains("ps")) {
     TString cmd = "ps2pdf " + base + ext + " " + base + ".pdf";
-    gSystem->Exec(cmd.Data()); 
+    gSystem->Exec(cmd.Data());
   }
 
   return 0;
 }
 
-TCanvas* DrawObject(TObject* obj, 
-		    TString drawopt, 
+TCanvas* DrawObject(TObject* obj,
+		    TString drawopt,
 		    TString title,
 		    TObjArray* cList,
 		    double xpx, double ypx)
@@ -334,8 +343,8 @@ TCanvas* DrawObject(TObject* obj,
   }
   else
     obj->Draw(drawopt.Data());
-  
-  if (cList) 
+
+  if (cList)
     cList->Add(c);
 
   return c;
@@ -346,7 +355,7 @@ void SetHistProps(TH1* h,
 		  Int_t fillcolor,
 		  Int_t markercolor,
 		  Int_t markerstyle,
-		  Double_t markersize) 
+		  Double_t markersize)
 {
   h->SetLineColor(linecolor);
   h->SetFillColor(fillcolor);
@@ -367,7 +376,7 @@ void CopyProps(TObject* obj, TObjArray* arr)
   if (isTH1) {
     h  = dynamic_cast<TH1*>(obj);
     lc = h->GetLineColor();
-    fc = h->GetFillColor();  
+    fc = h->GetFillColor();
     mc = h->GetMarkerColor();
     ms = h->GetMarkerStyle();
     mz = h->GetMarkerSize();
@@ -375,19 +384,19 @@ void CopyProps(TObject* obj, TObjArray* arr)
   else if (isTGr) {
     g  = dynamic_cast<TGraph*>(obj);
     lc = g->GetLineColor();
-    fc = g->GetFillColor();  
+    fc = g->GetFillColor();
     mc = g->GetMarkerColor();
     ms = g->GetMarkerStyle();
     mz = g->GetMarkerSize();
   }
   else {
-    Warning("UtilFns - CopyProps()",
+    gROOT->Warning("UtilFns - CopyProps()",
   	    "Class %s not recognized", obj->ClassName());
     return;
   }
-  
+
   for (int i=0; i<arr->GetEntries(); i++) {
-    
+
     if ((arr->At(i))->InheritsFrom(TH1::Class())) {
       h = (TH1*)arr->At(i);
       h->SetLineColor(   lc );
@@ -413,7 +422,7 @@ void SetGraphProps(TGraph* g,
 		   Int_t fillcolor,
 		   Int_t markercolor,
 		   Int_t markerstyle,
-		   Double_t markersize) 
+		   Double_t markersize)
 {
   g->SetLineColor(linecolor);
   g->SetFillColor(fillcolor);
@@ -435,10 +444,10 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
   for (int n=0; n<nFrames; n++) {
 
     TObject* mov = moveObjs->At(n);
-    
+
     // Add changing objects
     anim->Add(mov, n, opt);
-    
+
     // Add stationary objects
     if (statObjs) {
       for (int i=0; i<statObjs->GetEntries(); i++) {
@@ -446,7 +455,7 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
 	anim->Add(sta, n, opt+"same");
       }
     }
-    
+
   }
 
   anim->SetSleepTime(sleeptime); // ms (default = 0)
@@ -454,16 +463,16 @@ TGraphTime* Animation(TObjArray* moveObjs, TObjArray* statObjs,
   // Rename auto-generated frame histo
   TH1* hf = (TH1*)gDirectory->Get("frame");
   hf->SetName(Form("frame%d", iAnim));
-  
+
   return anim;
 }
 
-TGraphTime* Animation(TH2* h, 
+TGraphTime* Animation(TH2* h,
 		      TObjArray* statObjs,
-		      TString opt, 
-		      int sleeptime, 
-		      int color, 
-		      int mkr, 
+		      TString opt,
+		      int sleeptime,
+		      int color,
+		      int mkr,
 		      double mkrsize,
 		      double x1,double y1,double x2,double y2)
 {
@@ -472,7 +481,7 @@ TGraphTime* Animation(TH2* h,
 
   for (int k=1; k<=h->GetNbinsY(); k++) {
     TH1D* hp = h->ProjectionX(Form("h%d_%d",id,k),k,k);
-    
+
     if (x2>x1) hp->GetXaxis()->SetRangeUser(x1,x2);
     if (y2>y1) hp->GetYaxis()->SetRangeUser(y1,y2);
 
@@ -488,15 +497,15 @@ TGraphTime* Animation(TH2* h,
 
 // TODO: parse propt to determine automatically which proj to do according to Project3D options
 TGraphTime* Animation(TH3* h,
-		      TString propt, 
-		      int sleeptime, 
+		      TString propt,
+		      int sleeptime,
 		      TString opt)
 {
   static int id=0; id++;
   TObjArray* a = new TObjArray();
-  
+
   TAxis* axis = h->GetZaxis();
-  
+
   for (int k=1; k<=axis->GetNbins(); k++) {
     axis->SetRange(k,k);
     TH2D* h2 = (TH2D*)h->Project3D(Form("h2_%d_%d_%s",id,k,propt.Data()));
@@ -512,7 +521,7 @@ TMultiGraph* MultiGraph(TH2* h, TString /*opt*/)
   int ny = h->GetNbinsY();
   TMultiGraph* mg = new TMultiGraph();
   TGraph* g = 0;
- 
+
   for (int i=0; i<ny; i++) {
     g = new TGraph(nx);
     g->SetLineWidth(2);
@@ -520,7 +529,7 @@ TMultiGraph* MultiGraph(TH2* h, TString /*opt*/)
     g->SetTitle(Form("g%d",i));
     for (int j=0; j<nx; j++) {
       double x = h->GetXaxis()->GetBinCenter(j+1);
-      double y = h->GetBinContent(j+1,i+1); 
+      double y = h->GetBinContent(j+1,i+1);
       g->SetPoint(j,x,y);
     }
     mg->Add(g);
@@ -538,7 +547,7 @@ void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
   TString extensions[3] = {"pdf", "png", "jpg"};
   TSystemDirectory tsd(dir.Data(), dir.Data());
   TList* files = tsd.GetListOfFiles();
-  std::vector<TString> fileNames;  
+  std::vector<TString> fileNames;
   const char* outdir = gSystem->DirName(texFileName.Data());
 
   // Select file names to include
@@ -560,7 +569,7 @@ void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
 	// Xetex unfortunately does not support ROOT's /Rotate 90 hack, so
 	// PDFs are included in portrait layout. To deal with this,
 	// create rotated PDFs using pdfcrop. Add "rotate" to opt.
-	bool rotate = opt.Contains("rotate") && fileName.EndsWith(".pdf") && !fileName.EndsWith("-rot.pdf"); 
+	bool rotate = opt.Contains("rotate") && fileName.EndsWith(".pdf") && !fileName.EndsWith("-rot.pdf");
 	if (rotate) {
 	  TString newName = fileName;
 	  newName.ReplaceAll(".pdf", "-rot.pdf");
@@ -572,10 +581,10 @@ void MakeBeamerSlides(TString dir, TString texFileName, TString opt)
       }
     }
   }
-  
+
   // Write LaTex file
   gSystem->RedirectOutput(texFileName, "w", 0);
-  for (int i=0; i<(int)fileNames.size(); ++i) 
+  for (int i=0; i<(int)fileNames.size(); ++i)
     PrintSlide(fileNames.at(i));
   gSystem->RedirectOutput(0); // Back to stdout, stderr
   return;
