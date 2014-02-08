@@ -55,8 +55,8 @@ void StyleDefs() {
   
   // Margins
   s1->SetPadBottomMargin(0.14);
-  s1->SetPadLeftMargin(0.14);
-  s1->SetPadRightMargin(0.05);
+  s1->SetPadLeftMargin(0.15);
+  s1->SetPadRightMargin(0.07);
   
   // Frame
   s1->SetFrameBorderMode(0);
@@ -66,7 +66,7 @@ void StyleDefs() {
   s1->SetPadTickX(0);
   s1->SetPadTickY(1);
   s1->SetTitleOffset(1.3,"x");
-  s1->SetTitleOffset(1.4,"y");
+  s1->SetTitleOffset(1.6,"y");
   s1->SetTitleOffset(1.4,"z");
   
   // Axis label/title sizes
