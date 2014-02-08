@@ -76,6 +76,8 @@ TMatrixD Hist2Matrix(const TH2 *h);
 TVectorD Graph2Vec(const TGraph *g);
 TH1D *Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
                TString name, TString title="");
+TH1D *Vec2Hist(const TVectorD &v, TAxis *a, TString name, TString title="");
+TH2D *Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax, TAxis *ay);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName,
                   double x1, double x2, double y1, double y2);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName,
@@ -140,6 +142,26 @@ Hist2Matrix(const TH2 *h)
     }
   }
   return m;
+}
+
+TH2D *
+Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax, TAxis *ay)
+{
+  int m = A.GetNrows();
+  int n = A.GetNcols();
+  TH2D *h = new TH2D(hName.Data(), hName.Data(),
+                     m, ax->GetXbins()->GetArray(),
+                     n, ay->GetXbins()->GetArray());
+
+  for (int i=0; i<m; i++)
+  {
+    for (int j=0; j<n; j++)
+    {
+      h->SetBinContent(i+1, j+1, A(i,j));
+    }
+  }
+
+  return h;
 }
 
 TH2D *
@@ -215,6 +237,21 @@ Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
   }
   return h;
 }
+
+TH1D *
+Vec2Hist(const TVectorD &v, TAxis *a, TString name, TString title)
+{
+  int nb = v.GetNoElements();
+  TH1D *h = new TH1D(name.Data(), title.Data(), nb, a->GetXbins()->GetArray());
+
+  for (int i=0; i<nb; i++)
+  {
+    h->SetBinContent(i+1, v(i));
+  }
+
+  return h;
+}
+
 
 TVectorD
 Hist2Vec(const TH1 *h, TString opt)
