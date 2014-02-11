@@ -1,5 +1,5 @@
 // To use one of these styles:
-// gROOT->Macro("StyleDefs.C");
+// gROOT->Macro("StyleDefs.h");
 // gROOT->SetStyle("custom1")
 //
 // To reset style to the default:
