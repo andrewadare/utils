@@ -16,6 +16,9 @@
 //
 // Please report issues to Andrew Adare andrewadare@gmail.com
 
+#ifndef MatrixUtils_h
+#define MatrixUtils_h
+
 #include <TMatrixD.h>
 #include <TVectorD.h>
 #include <TDecompSVD.h>
@@ -118,6 +121,8 @@ TMatrixD Toeplitz(int m1, int n1, double col[], double row[]); // Pass in first 
 TMatrixD LMatrix(const int n, const int kind, double eps = 1.e-5); // Matrix to define smoothing seminorm
 TMatrixD DerivativeMatrix(int n, int d);
 TVectorD Ones(int n); // n-vector of 1's
+TVectorD RowSum(TMatrixD &A); // Return sum across rows of A (size nrows)
+TVectorD ColSum(TMatrixD &A); // Return sum down columns of A (size ncols)
 TVectorD ElemMult(const TVectorD &x, const TVectorD &y); // Element-wise vector multiplication
 TVectorD ElemDiv(const TVectorD &x, const TVectorD &y, double div0val = 0.);   // Element-wise vector division
 TMatrixD MultRowsByVector(const TMatrixD &M, const TVectorD &v);
@@ -548,6 +553,35 @@ MultRowsByVector(const TMatrixD &M, const TVectorD &v)
   }
   return R;
 }
+
+TVectorD
+ColSum(TMatrixD &A)
+{
+  int n = A.GetNcols();
+  TVectorD v(n);
+
+  for (int j=0; j<n; j++)
+  {
+    TVectorD col = TMatrixDColumn(A,j);
+    v(j) = col.Sum();
+  }
+  return v;
+}
+
+TVectorD
+RowSum(TMatrixD &A)
+{
+  int m = A.GetNrows();
+  TVectorD v(m);
+
+  for (int i=0; i<m; i++)
+  {
+    TVectorD row = TMatrixDRow(A,i);
+    v(i) = row.Sum();
+  }
+  return v;
+}
+
 TMatrixD
 Toeplitz(int m1, int n1, double col[], double row[])
 {
@@ -1698,3 +1732,4 @@ SwapElements(TVectorD &v, int j1, int j2)
 }
 
 } // End namespace MatrixUtils
+#endif
