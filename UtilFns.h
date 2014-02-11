@@ -1,16 +1,18 @@
-// UtilFns.C
+// UtilFns.h
 //
 // ROOT functions for plotting, image output, animation, etc.
 // Get the latest version:
 // git clone https://github.com/andrewadare/utils.git
 //
 // To use in your interpreted macro, add this line:
-// gROOT->LoadMacro("/path/to/UtilFns.C");
+// gROOT->LoadMacro("/path/to/UtilFns.h");
 //
 // To use in compiled code, #include it.
 // -Andrew Adare 4/24/2013
 
-#if !defined(__CINT__) || defined(__MAKECINT__)
+#ifndef UtilFns_h
+#define UtilFns_h
+
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TList.h"
@@ -31,7 +33,6 @@
 #include "TSystemDirectory.h"
 #include "TSystemFile.h"
 #include <vector>
-#endif
 
 // Function prototypes
 void SaveCanvases(TObjArray *canvases, const char *fileName);
@@ -643,3 +644,5 @@ void PrintSlide(TString fig)
   Printf("\\end{center}");
   Printf("\\end{frame}\n\n");
 }
+
+#endif
