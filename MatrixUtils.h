@@ -1,4 +1,4 @@
-// MatrixUtils.C
+// MatrixUtils.h
 // Matrix functions to augment ROOT's capabilities.
 //
 // - Matrix and vector <--> histogram conversions
@@ -8,7 +8,7 @@
 // - A couple commonly-used matrix types
 //
 // To use in a ROOT script, either compiled or interpreted:
-//   #include "MatrixUtils.C"
+//   #include "MatrixUtils.h"
 //   Then qualify names globally:
 //     using MatrixUtils
 //   Or not:
@@ -78,9 +78,9 @@ TVectorD Hist2Vec(const TH1 *h, TString opt=""); // use "unc" to get error
 TMatrixD Hist2Matrix(const TH2 *h);
 TVectorD Graph2Vec(const TGraph *g);
 TH1D *Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
-               TString name, TString title="");
-TH1D *Vec2Hist(const TVectorD &v, TAxis *a, TString name, TString title="");
-TH2D *Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax, TAxis *ay);
+               TString name="", TString title="");
+TH1D *Vec2Hist(const TVectorD &v, TAxis *a=0, TString name="", TString title="");
+TH2D *Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax=0, TAxis *ay=0);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName,
                   double x1, double x2, double y1, double y2);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName,
@@ -154,9 +154,16 @@ Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax, TAxis *ay)
 {
   int m = A.GetNrows();
   int n = A.GetNcols();
-  TH2D *h = new TH2D(hName.Data(), hName.Data(),
-                     m, ax->GetXbins()->GetArray(),
-                     n, ay->GetXbins()->GetArray());
+  TH2D *h = 0;
+
+  if (ax && ay)
+  {
+    h = new TH2D(hName.Data(), hName.Data(),
+                 m, ax->GetXbins()->GetArray(),
+                 n, ay->GetXbins()->GetArray());
+  }
+  else
+    h = new TH2D(hName.Data(), hName.Data(), m, 0, m, n, 0, n);
 
   for (int i=0; i<m; i++)
   {
@@ -246,8 +253,15 @@ Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
 TH1D *
 Vec2Hist(const TVectorD &v, TAxis *a, TString name, TString title)
 {
+  static int ncalls = 0;
   int nb = v.GetNoElements();
-  TH1D *h = new TH1D(name.Data(), title.Data(), nb, a->GetXbins()->GetArray());
+  TH1D *h = 0;
+  const char* hname = name.IsNull() ? Form("htmp%d", ncalls) : name.Data();
+
+  if (a)
+    h = new TH1D(hname, title.Data(), nb, a->GetXbins()->GetArray());
+  else
+    h = new TH1D(hname, title.Data(), nb, 0, nb);
 
   for (int i=0; i<nb; i++)
   {
@@ -1087,23 +1101,23 @@ CSDecomp(TMatrixD &Q1, TMatrixD &Q2)
     R.Print();
   }
 
-  // Get R2 and R3 from R
-  TMatrixD R2 = R.GetSub(l-q2,r,l-q2,r);
-  TMatrixD R3 = R.GetSub(rdim,q1-1,rdim,l-1);
-  int r3r = R3.GetNrows();
-  int r3c = R3.GetNcols();
+  // Get R_2 and R_3 from R
+  TMatrixD R_2 = R.GetSub(l-q2,r,l-q2,r);
+  TMatrixD R_3 = R.GetSub(rdim,q1-1,rdim,l-1);
+  int r3r = R_3.GetNrows();
+  int r3c = R_3.GetNcols();
   if (r3r < r3c)
-    R3.ResizeTo(r3c, r3c);
+    R_3.ResizeTo(r3c, r3c);
 
   if (debug)
   {
-    cout << "R2: ";  R2.Print();
-    cout << "R3: ";  R3.Print();
+    cout << "R_2: ";  R_2.Print();
+    cout << "R_3: ";  R_3.Print();
   }
 
   // 10.
-  // Compute SVD of R3: R3 = Ur*Cr*Zr'
-  TDecompSVD svd2(R3);
+  // Compute SVD of R_3: R_3 = Ur*Cr*Zr'
+  TDecompSVD svd2(R_3);
   TMatrixD Ur = svd2.GetU();
   TMatrixD Zr = svd2.GetV();
   TVectorD a3 = svd2.GetSig();
@@ -1121,7 +1135,7 @@ CSDecomp(TMatrixD &Q1, TMatrixD &Q2)
   // 12.
   for (int i=l-q2; i<rdim; i++)
   {
-    alpha(i) = R2(i,i);
+    alpha(i) = R_2(i,i);
   }
 
   if (debug)
