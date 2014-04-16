@@ -224,6 +224,12 @@ int PrintPDFs(TObjArray *cList, TString dir, TString opt)
     // if (gSystem->FindFile(dir.Data(), fileName))
     //   gROOT->Info("PrintPDFs()", "Overwriting %s", fileName.Data());
 
+    if (gSystem->AccessPathName(dir.Data()) != 0)
+    {
+      gROOT->Info("PrintPDFs()", "Creating %s", dir.Data());
+      gSystem->mkdir(dir.Data());
+    }
+
     if (!dir.EndsWith("/"))
       dir.Append("/");
 
