@@ -79,7 +79,9 @@ TMatrixD Hist2Matrix(const TH2 *h);
 TVectorD Graph2Vec(const TGraph *g);
 TH1D *Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
                TString name="", TString title="");
+TH1D *Vec2Hist(const TVectorD &v, const TH1 *haxes, TString name);
 TH1D *Vec2Hist(const TVectorD &v, TAxis *a=0, TString name="", TString title="");
+TH2D *Matrix2Hist(TMatrixD &A, TString hName, TH2D *haxes);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax=0, TAxis *ay=0);
 TH2D *Matrix2Hist(TMatrixD &A, TString hName,
                   double x1, double x2, double y1, double y2);
@@ -140,13 +142,46 @@ Hist2Matrix(const TH2 *h)
   int ny = h->GetNbinsY();
   TMatrixD m(nx, ny);
   for (Int_t j=0; j<ny; j++)
-  {
     for (Int_t i=0; i<nx; i++)
-    {
       m(i,j) = h->GetBinContent(i+1,j+1);
-    }
-  }
+
   return m;
+}
+
+TH2D *
+Matrix2Hist(TMatrixD &A, TString hName, TH2D *haxes)
+{
+  int m = A.GetNrows();
+  int n = A.GetNcols();
+  TH2D *h = 0;
+  double *xbins = new double[m+1];
+  double *ybins = new double[n+1];
+
+  if (haxes && haxes->GetNbinsX() == m && haxes->GetNbinsY() == n)
+  {
+    for (int i=0; i<m; i++)
+      xbins[i] = haxes->GetXaxis()->GetBinLowEdge(i+1);
+    xbins[m] = haxes->GetXaxis()->GetBinUpEdge(m);
+
+    for (int j=0; j<n; j++)
+      ybins[j] = haxes->GetYaxis()->GetBinLowEdge(j+1);
+    ybins[n] = haxes->GetYaxis()->GetBinUpEdge(n);
+
+    h = new TH2D(hName.Data(), hName.Data(), m, xbins, n, ybins);
+  }
+  else
+    h = new TH2D(hName.Data(), hName.Data(), m, 0, m, n, 0, n);
+
+  for (int i=0; i<m; i++)
+    for (int j=0; j<n; j++)
+      h->SetBinContent(i+1, j+1, A(i,j));
+
+  h->SetXTitle(haxes->GetXaxis()->GetTitle());
+  h->SetYTitle(haxes->GetYaxis()->GetTitle());
+
+  delete[] xbins;
+  delete[] ybins;
+  return h;
 }
 
 TH2D *
@@ -155,23 +190,30 @@ Matrix2Hist(TMatrixD &A, TString hName, TAxis *ax, TAxis *ay)
   int m = A.GetNrows();
   int n = A.GetNcols();
   TH2D *h = 0;
+  double *xbins = new double[m+1];
+  double *ybins = new double[n+1];
 
-  if (ax && ay)
+  if (ax && ay && ax->GetNbins() == m && ay->GetNbins() == n)
   {
-    h = new TH2D(hName.Data(), hName.Data(),
-                 m, ax->GetXbins()->GetArray(),
-                 n, ay->GetXbins()->GetArray());
+    for (int i=0; i<m; i++)
+      xbins[i] = ax->GetBinLowEdge(i+1);
+    xbins[m] = ax->GetBinUpEdge(m);
+
+    for (int j=0; j<n; j++)
+      ybins[j] = ay->GetBinLowEdge(j+1);
+    ybins[n] = ay->GetBinUpEdge(n);
+
+    h = new TH2D(hName.Data(), hName.Data(), m, xbins, n, ybins);
   }
   else
     h = new TH2D(hName.Data(), hName.Data(), m, 0, m, n, 0, n);
 
   for (int i=0; i<m; i++)
-  {
     for (int j=0; j<n; j++)
-    {
       h->SetBinContent(i+1, j+1, A(i,j));
-    }
-  }
+
+  delete[] xbins;
+  delete[] ybins;
 
   return h;
 }
@@ -185,19 +227,14 @@ Matrix2Hist(TMatrixD &A, TString hName,
   TH2D *h = new TH2D(hName.Data(),hName.Data(),m,x1,x2,n,y1,y2);
 
   for (int i=0; i<m; i++)
-  {
     for (int j=0; j<n; j++)
-    {
       h->SetBinContent(i+1, j+1, A(i,j));
-    }
-  }
 
   return h;
 }
 
 TH2D *
-Matrix2Hist(TMatrixD &A, TString hName,
-            double xbins[], double ybins[])
+Matrix2Hist(TMatrixD &A, TString hName, double xbins[], double ybins[])
 {
   // xbins and ybins better have size m+1 and n+1, respectively
   int m = A.GetNrows();
@@ -205,12 +242,8 @@ Matrix2Hist(TMatrixD &A, TString hName,
   TH2D *h = new TH2D(hName.Data(),hName.Data(),m,xbins,n,ybins);
 
   for (int i=0; i<m; i++)
-  {
     for (int j=0; j<n; j++)
-    {
       h->SetBinContent(i+1, j+1, A(i,j));
-    }
-  }
 
   return h;
 }
@@ -224,17 +257,36 @@ Matrix2Hist(TMatrixD &A, TMatrixD &errA, TString hName,
   TH2D *h = new TH2D(hName.Data(),hName.Data(),m,xbins,n,ybins);
 
   for (int i=0; i<m; i++)
-  {
     for (int j=0; j<n; j++)
     {
       h->SetBinContent(i+1, j+1, A(i,j));
       h->SetBinError(i+1, j+1, errA(i,j));
     }
-  }
 
   return h;
 }
 
+TH1D *
+Vec2Hist(const TVectorD &v, const TH1 *haxes, TString name)
+{
+  int m = v.GetNrows();
+  double *xbins = new double[m+1];
+  TAxis *ax = haxes->GetXaxis();
+  assert(ax->GetNbins() == m);
+
+  for (int i=0; i<m; i++)
+    xbins[i] = ax->GetBinLowEdge(i+1);
+  xbins[m] = ax->GetBinUpEdge(m);
+
+  TH1D *h = new TH1D(name.Data(), name.Data(), m, xbins);
+  h->SetXTitle(ax->GetTitle());
+
+  for (int i=0; i<m; i++)
+    h->SetBinContent(i+1, v(i));
+
+  delete[] xbins;
+  return h;
+}
 
 TH1D *
 Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
@@ -244,33 +296,36 @@ Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
   TH1D *h = new TH1D(name.Data(), title.Data(), nb, x1, x2);
 
   for (int i=0; i<nb; i++)
-  {
     h->SetBinContent(i+1, v(i));
-  }
+
   return h;
 }
 
 TH1D *
 Vec2Hist(const TVectorD &v, TAxis *a, TString name, TString title)
 {
+  int m = v.GetNrows();
+  double *xbins = new double[m+1];
+  assert(a->GetNbins() == m);
   static int ncalls = 0;
-  int nb = v.GetNoElements();
   TH1D *h = 0;
-  const char* hname = name.IsNull() ? Form("htmp%d", ncalls) : name.Data();
+  const char *hname = name.IsNull() ? Form("htmp%d", ncalls) : name.Data();
+
+  for (int i=0; i<m; i++)
+    xbins[i] = a->GetBinLowEdge(i+1);
+  xbins[m] = a->GetBinUpEdge(m);
 
   if (a)
-    h = new TH1D(hname, title.Data(), nb, a->GetXbins()->GetArray());
+    h = new TH1D(hname, title.Data(), m, xbins);
   else
-    h = new TH1D(hname, title.Data(), nb, 0, nb);
+    h = new TH1D(hname, title.Data(), m, 0, m);
 
-  for (int i=0; i<nb; i++)
-  {
+  for (int i=0; i<m; i++)
     h->SetBinContent(i+1, v(i));
-  }
 
+  delete[] xbins;
   return h;
 }
-
 
 TVectorD
 Hist2Vec(const TH1 *h, TString opt)
@@ -300,9 +355,8 @@ Graph2Vec(const TGraph *g)
   if (!g) return v;
 
   for (int i=0; i<nb; i++)
-  {
     v(i) = g->GetY()[i];
-  }
+
   return v;
 }
 
