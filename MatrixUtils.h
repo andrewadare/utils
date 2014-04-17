@@ -76,7 +76,7 @@ struct GSVDecompResult   // Output from GSVD().
 // Conversion methods
 TVectorD Hist2Vec(const TH1 *h, TString opt=""); // use "unc" to get error
 TMatrixD Hist2Matrix(const TH2 *h);
-TVectorD Graph2Vec(const TGraph *g);
+TVectorD Graph2Vec(const TGraph *g, TString opt=""); // opt = hi/lo for error
 TH1D *Vec2Hist(const TVectorD &v, Double_t x1, Double_t x2,
                TString name="", TString title="");
 TH1D *Vec2Hist(const TVectorD &v, const TH1 *haxes, TString name);
@@ -347,15 +347,28 @@ Hist2Vec(const TH1 *h, TString opt)
 }
 
 TVectorD
-Graph2Vec(const TGraph *g)
+Graph2Vec(const TGraph *g, TString opt)
 {
   // Return a TVectorD from a TGraph (or inherited classes)
+  // Passing in "hi"("lo") returns a vector of points +(-) errors.
+   
   int nb = g->GetN();
   TVectorD v(nb);
   if (!g) return v;
 
-  for (int i=0; i<nb; i++)
-    v(i) = g->GetY()[i];
+  TString cl = g->ClassName();
+  bool e = (cl == "TGraphErrors");
+  bool a = (cl == "TGraphAsymmErrors");
+
+  if (opt == "hi")
+    for (int i=0; i<nb; i++)
+      v(i) = g->GetY()[i] + (a ? g->GetEYhigh()[i] : e ? g->GetEY()[i] : 0);
+  else if (opt == "lo")
+    for (int i=0; i<nb; i++)
+      v(i) = g->GetY()[i] - (a ? g->GetEYlow()[i] : e ? g->GetEY()[i] : 0);
+  else
+    for (int i=0; i<nb; i++)
+      v(i) = g->GetY()[i];
 
   return v;
 }
