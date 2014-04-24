@@ -11,6 +11,8 @@
 // 55 (rainbow) is default.
 
 #include "TStyle.h"
+#include "TColor.h"
+
 
 TStyle* s1 = 0;
 TStyle* s2 = 0;
