@@ -227,7 +227,7 @@ int PrintPDFs(TObjArray *cList, TString dir, TString opt)
     if (gSystem->AccessPathName(dir.Data()) != 0)
     {
       gROOT->Info("PrintPDFs()", "Creating %s", dir.Data());
-      gSystem->mkdir(dir.Data());
+      gSystem->mkdir(dir.Data(), true);
     }
 
     if (!dir.EndsWith("/"))
