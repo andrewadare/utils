@@ -120,7 +120,7 @@ TMatrixD MoorePenroseInverse(TMatrixD &A, double tol = 1e-15); // Uses SVD
 TMatrixD Null(TMatrixD &A); // Columns form a basis for the null space of A
 int Rank(TMatrixD &A); // Uses SVD
 TMatrixD Toeplitz(int m1, int n1, double col[], double row[]); // Pass in first col & row
-TMatrixD LMatrix(const int n, const int kind, double eps = 1.e-5); // Matrix to define smoothing seminorm
+// TMatrixD LMatrix(const int n, const int kind, double eps = 1.e-5); // Matrix to define smoothing seminorm
 TMatrixD DerivativeMatrix(int n, int d);
 TVectorD Ones(int n); // n-vector of 1's
 TVectorD RowSum(TMatrixD &A); // Return sum across rows of A (size nrows)
@@ -351,7 +351,7 @@ Graph2Vec(const TGraph *g, TString opt)
 {
   // Return a TVectorD from a TGraph (or inherited classes)
   // Passing in "hi"("lo") returns a vector of points +(-) errors.
-   
+
   int nb = g->GetN();
   TVectorD v(nb);
   if (!g) return v;
@@ -698,6 +698,82 @@ Toeplitz(int m1, int n1, double col[], double row[])
   }
   return T;
 }
+
+// TMatrixD
+// LMatrix(const int n, const int kind, double eps)
+// {
+//   // Return p x n smoothing matrix. The number of rows p is
+//   // case-dependent.
+
+//   // Top row and left column.
+//   // Make sure that row[0] = col[0]
+//   double row[n];
+//   for (int j=0; j<n; j++) row[j]=0.0;
+
+//   if (kind == kUnitMatrix)   // n x n identity matrix. p = n. W=0.
+//   {
+//     double col[n];
+//     for (int i=0; i<n; i++) col[i]=0.0;
+//     row[0] = col[0] = 1;
+//     return Toeplitz(n,n,col,row);
+//   }
+//   if (kind == k1DerivNoBC)   // 1st deriv, no BC assumptions. p = n-1. W=const.
+//   {
+//     double col[n-1];
+//     for (int i=0; i<n-1; i++) col[i]=0.0;
+//     row[0] = col[0] = -1;
+//     row[1] = 1;
+//     return Toeplitz(n-1,n,col,row);
+//   }
+//   if (kind == k2DerivNoBC)   // 2nd deriv, no BC assumptions. p = n-2. W=const, linear.
+//   {
+//     double col[n-2];
+//     for (int i=0; i<n-2; i++) col[i]=0.0;
+//     row[0] = col[0] = 1;
+//     row[1] = -2;
+//     row[2] = 1;
+//     return Toeplitz(n-2,n,col,row);
+//   }
+//   if (kind == k1DerivBC0)   // 1st deriv, BC=0 on L and R. p = n+1. W=0.
+//   {
+//     double col[n+1];
+//     for (int i=0; i<n+1; i++) col[i]=0.0;
+//     row[0] = col[0] = 1;
+//     col[1] = -1;
+//     return Toeplitz(n+1,n,col,row);
+//   }
+//   if (kind == k2DerivBC0)   // 2nd deriv, BC=0 on L and R. p = n. W=0.
+//   {
+//     double col[n];
+//     for (int i=0; i<n; i++) col[i]=0.0;
+//     row[0] = col[0] = -2+eps;
+//     row[1] = col[1] = 1;
+//     return Toeplitz(n,n,col,row);
+//   }
+//   if (kind == k1DerivBCR)   // 1st deriv, reflect at L,R. p = n-1. W=const. Same as k1DerivNoBC
+//   {
+//     double col[n-1];
+//     for (int i=0; i<n-1; i++) col[i]=0.0;
+//     row[0] = col[0] = -1;
+//     row[1] = 1;
+//     return Toeplitz(n-1,n,col,row);
+//   }
+//   if (kind == k2DerivBCR)   // 2nd deriv, reflect at L,R. p = n. W=const.
+//   {
+//     double col[n];
+//     for (int i=0; i<n; i++) col[i]=0.0;
+//     row[0] = col[0] = -2+eps;
+//     row[1] = col[1] = 1;
+//     TMatrixD L = Toeplitz(n,n,col,row);
+//     L(0,0) = -1+eps;
+//     L(n-1,n-1) = -1+eps;
+//     return L;
+//   }
+
+//   TMatrixD Ldefault(n,n);
+//   Ldefault.UnitMatrix();
+//   return Ldefault;
+// }
 
 int
 Rank(TMatrixD &A)
