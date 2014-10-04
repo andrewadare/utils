@@ -304,7 +304,7 @@ int PrintPDF(TObjArray *cList, TString base, TString opt)
     if (nPrinted==0)
     {
       psOut = base + ext + "[";
-      c->Print(psOut.Data()); // opens ps but doesn't print it
+      c->SaveAs(psOut.Data()); // opens ps but doesn't print it
     }
     if (i < cList->GetEntries())
     {
@@ -312,7 +312,7 @@ int PrintPDF(TObjArray *cList, TString base, TString opt)
       if (ext.Contains("pdf"))
       {
         TString pageName = Form("Title:%s", c->GetName());
-        c->Print(psOut.Data(), pageName.Data());
+        c->SaveAs(psOut.Data(), pageName.Data());
       }
       else
         c->Print(psOut.Data());
@@ -323,10 +323,10 @@ int PrintPDF(TObjArray *cList, TString base, TString opt)
       if (ext.Contains("pdf"))
       {
         TString pageName = Form("Title:%s", c->GetName());
-        c->Print(psOut.Data(), pageName.Data());
+        c->SaveAs(psOut.Data(), pageName.Data());
       }
       else
-        c->Print(psOut.Data());
+        c->SaveAs(psOut.Data());
     }
 
     // Also print pages as individual files, if requested
@@ -334,7 +334,7 @@ int PrintPDF(TObjArray *cList, TString base, TString opt)
     {
       TString dir = gSystem->DirName(base.Data());
       TString fileName = dir + "/" + TString(c->GetName()) + ext;
-      c->Print(fileName.Data());
+      c->SaveAs(fileName.Data());
     }
 
     nPrinted++;
